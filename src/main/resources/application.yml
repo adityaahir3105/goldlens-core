@@ -1,9 +1,6 @@
 spring:
-  application:
-    name: goldlens-core
-
   datasource:
-    url: ${DB_URL:jdbc:postgresql://localhost:5432/goldlens}
+    url: jdbc:${DATABASE_URL}
     username: ${DB_USERNAME:goldlens}
     password: ${DB_PASSWORD:goldlens}
     driver-class-name: org.postgresql.Driver
