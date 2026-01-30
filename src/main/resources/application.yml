@@ -31,11 +31,12 @@ goldapi:
 management:
   endpoints:
     web:
+      base-path: /actuator
       exposure:
-        include: health,info
+        include: health,info,mappings
   endpoint:
     health:
-      show-details: never
+      show-details: always
 
 logging:
   level:
