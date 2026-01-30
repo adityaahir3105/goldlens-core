@@ -19,7 +19,8 @@ public class GoldRiskScheduler {
         this.goldRiskAggregationService = goldRiskAggregationService;
     }
 
-    @Scheduled(cron = "0 */1 * * * *")
+    // Daily at 06:10 UTC - runs after indicator schedulers to aggregate fresh signals
+    @Scheduled(cron = "0 10 6 * * *")
     public void computeDailyGoldRisk() {
         log.info("Starting daily gold risk aggregation");
         goldRiskAggregationService.computeAndStoreRiskSnapshot(LocalDate.now());

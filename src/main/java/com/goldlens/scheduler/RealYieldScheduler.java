@@ -36,7 +36,8 @@ public class RealYieldScheduler {
         this.signalEngineService = signalEngineService;
     }
 
-    @Scheduled(cron = "0 */1 * * * *")
+    // Daily at 06:00 UTC - FRED updates macro data once per day, no need for more frequent polling
+    @Scheduled(cron = "0 0 6 * * *")
     public void ingestRealYield() {
         log.info("Starting US 10Y Real Yield ingestion");
 

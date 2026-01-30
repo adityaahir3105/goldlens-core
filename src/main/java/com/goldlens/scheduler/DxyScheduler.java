@@ -36,7 +36,8 @@ public class DxyScheduler {
         this.signalEngineService = signalEngineService;
     }
 
-    @Scheduled(cron = "0 */1 * * * *")
+    // Daily at 06:05 UTC - runs after RealYieldScheduler; FRED data updates once per day
+    @Scheduled(cron = "0 5 6 * * *")
     public void ingestDxy() {
         log.info("Starting US Dollar Index ingestion");
 

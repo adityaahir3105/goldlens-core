@@ -44,10 +44,10 @@ public class StartupLogger {
         logApiKeyStatus("GOLD_API_KEY", environment.getProperty("goldapi.api.key"));
 
         // Log scheduler status
-        log.info("RealYieldScheduler enabled (cron: 0 0 6 * * *)");
-        log.info("DxyScheduler enabled (cron: 0 5 6 * * *)");
-        log.info("GoldRiskScheduler enabled (cron: 0 10 6 * * *)");
-        log.info("GoldPriceScheduler enabled (cron: 0 15 6 * * *)");
+        log.info("RealYieldScheduler enabled (cron: 0 0 6 * * * - daily 06:00 UTC)");
+        log.info("DxyScheduler enabled (cron: 0 5 6 * * * - daily 06:05 UTC)");
+        log.info("GoldRiskScheduler enabled (cron: 0 10 6 * * * - daily 06:10 UTC)");
+        log.info("GoldPriceScheduler enabled (cron: 0 */15 * * * * - every 15 minutes)");
 
         log.info("=== Startup Complete ===");
     }

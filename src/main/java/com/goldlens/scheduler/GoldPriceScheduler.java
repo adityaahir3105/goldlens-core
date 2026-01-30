@@ -25,7 +25,8 @@ public class GoldPriceScheduler {
         this.goldPriceHistoryService = goldPriceHistoryService;
     }
 
-    @Scheduled(cron = "0 15 6 * * *")
+    // Every 15 minutes - gold spot price changes frequently during trading hours
+    @Scheduled(cron = "0 */15 * * * *")
     public void ingestLatestGoldPrice() {
         log.info("Starting daily gold price ingestion via GoldAPI");
 
