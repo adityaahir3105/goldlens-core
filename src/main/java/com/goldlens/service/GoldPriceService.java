@@ -1,62 +1,51 @@
 package com.goldlens.service;
 
-import com.goldlens.client.GoldPriceClient;
+import com.goldlens.domain.GoldPriceHistory;
 import com.goldlens.dto.GoldPriceSnapshot;
+import com.goldlens.repository.GoldPriceHistoryRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
 import java.util.Optional;
-import java.util.concurrent.atomic.AtomicReference;
 
 @Service
 public class GoldPriceService {
 
     private static final Logger log = LoggerFactory.getLogger(GoldPriceService.class);
 
-    private static final int CACHE_DURATION_MINUTES = 5;
+    private static final String CURRENCY = "USD";
+    private static final String UNIT = "oz";
 
-    private final GoldPriceClient goldPriceClient;
+    private final GoldPriceHistoryRepository goldPriceHistoryRepository;
 
-    private final AtomicReference<CachedPrice> cache = new AtomicReference<>();
-
-    public GoldPriceService(GoldPriceClient goldPriceClient) {
-        this.goldPriceClient = goldPriceClient;
+    public GoldPriceService(GoldPriceHistoryRepository goldPriceHistoryRepository) {
+        this.goldPriceHistoryRepository = goldPriceHistoryRepository;
     }
 
     /**
-     * Returns the current gold price, using cached value if fresh.
-     * Cache expires after 5 minutes.
+     * Returns the latest gold price from the database.
+     * GoldAPI is only used by schedulers for ingestion, not for serving requests.
      */
     public Optional<GoldPriceSnapshot> getLatestPrice() {
-        CachedPrice cached = cache.get();
+        Optional<GoldPriceHistory> latest = goldPriceHistoryRepository.findTopByOrderByDateDesc();
 
-        if (cached != null && !cached.isExpired()) {
-            log.debug("Returning cached gold price from {}", cached.fetchedAt());
-            return Optional.of(cached.snapshot());
+        if (latest.isEmpty()) {
+            log.warn("No gold price data available in database");
+            return Optional.empty();
         }
 
-        log.info("Cache expired or empty — fetching fresh gold price");
-        Optional<GoldPriceSnapshot> freshPrice = goldPriceClient.fetchCurrentPrice();
+        GoldPriceHistory history = latest.get();
+        log.info("Serving latest gold price from DB: {} on {}", history.getPrice(), history.getDate());
 
-        freshPrice.ifPresent(snapshot -> {
-            cache.set(new CachedPrice(snapshot, LocalDateTime.now()));
-            log.info("Cached new gold price: {}", snapshot.getPrice());
-        });
+        GoldPriceSnapshot snapshot = GoldPriceSnapshot.builder()
+                .price(history.getPrice())
+                .currency(CURRENCY)
+                .unit(UNIT)
+                .asOf(history.getDate().atStartOfDay())
+                .source(history.getSource())
+                .build();
 
-        // If fetch failed but we have stale cache, return stale data
-        if (freshPrice.isEmpty() && cached != null) {
-            log.warn("Fetch failed — returning stale cached price from {}", cached.fetchedAt());
-            return Optional.of(cached.snapshot());
-        }
-
-        return freshPrice;
-    }
-
-    private record CachedPrice(GoldPriceSnapshot snapshot, LocalDateTime fetchedAt) {
-        boolean isExpired() {
-            return LocalDateTime.now().isAfter(fetchedAt.plusMinutes(CACHE_DURATION_MINUTES));
-        }
+        return Optional.of(snapshot);
     }
 }
