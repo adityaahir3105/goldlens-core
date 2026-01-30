@@ -1,0 +1,46 @@
+spring:
+  application:
+    name: goldlens-core
+
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/goldlens}
+    username: ${DB_USERNAME:goldlens}
+    password: ${DB_PASSWORD:goldlens}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+server:
+  port: ${PORT:8081}
+
+fred:
+  api:
+    key: ${FRED_API_KEY:}
+
+gemini:
+  api:
+    key: ${GEMINI_API_KEY:}
+
+goldapi:
+  api:
+    key: ${GOLD_API_KEY:}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: never
+
+logging:
+  level:
+    com.goldlens: INFO
+    org.hibernate.SQL: WARN

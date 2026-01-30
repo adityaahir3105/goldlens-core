@@ -1,0 +1,12 @@
+# Production profile - optimized for Railway/Render deployment
+spring:
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+
+logging:
+  level:
+    com.goldlens: INFO
+    org.hibernate.SQL: WARN
+    org.springframework: WARN
