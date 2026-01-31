@@ -10,14 +10,17 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 
 /**
  * Scheduler for gold price ingestion using GoldPricez API.
  * 
- * Note: GoldPricez only supports real-time prices, not historical data.
- * Historical backfill is disabled.
+ * Strategy: Persist snapshots to DB to build synthetic history over time.
+ * GoldPricez only supports real-time prices, not historical data.
  * 
- * Rate limit: 30-60 requests/hour, so we run every 15 minutes (4 req/hour).
+ * Rate limit: 30-60 requests/hour. We run every 6 hours (4 req/day) for DB persistence.
  */
 @Component
 public class GoldPriceScheduler {
@@ -25,9 +28,13 @@ public class GoldPriceScheduler {
     private static final Logger log = LoggerFactory.getLogger(GoldPriceScheduler.class);
 
     private static final String SOURCE = "GoldPricez";
+    private static final int MAX_CONSECUTIVE_FAILURES = 3;
 
     private final GoldPricezClient goldPricezClient;
     private final GoldPriceHistoryService goldPriceHistoryService;
+
+    private final AtomicInteger consecutiveFailures = new AtomicInteger(0);
+    private final AtomicReference<LocalDateTime> lastSuccessfulFetch = new AtomicReference<>();
 
     public GoldPriceScheduler(GoldPricezClient goldPricezClient, GoldPriceHistoryService goldPriceHistoryService) {
         this.goldPricezClient = goldPricezClient;
@@ -35,21 +42,26 @@ public class GoldPriceScheduler {
     }
 
     /**
-     * Fetches latest gold price from GoldPricez and persists for analytics/history.
-     * Runs every 15 minutes to stay well within rate limits (30-60 req/hour).
+     * Persists gold price snapshot to DB for synthetic history.
+     * Runs every 6 hours to minimize API calls while building history.
      */
-    @Scheduled(cron = "0 */15 * * * *")
-    public void ingestLatestGoldPrice() {
-        log.info("Starting gold price ingestion via GoldPricez");
+    @Scheduled(cron = "0 0 */6 * * *")
+    public void persistGoldPriceSnapshot() {
+        log.info("[scheduler] Starting gold price persistence job");
 
         if (!goldPricezClient.isConfigured()) {
-            log.warn("GoldPricez not configured — skipping ingestion");
+            log.warn("[scheduler] GoldPricez not configured — skipping");
             return;
+        }
+
+        if (consecutiveFailures.get() >= MAX_CONSECUTIVE_FAILURES) {
+            log.warn("[scheduler] Skipping due to {} consecutive failures. Will reset on next success.", 
+                    consecutiveFailures.get());
         }
 
         LocalDate today = LocalDate.now();
         if (goldPriceHistoryService.existsByDate(today)) {
-            log.info("Gold price for {} already exists — skipping persistence", today);
+            log.info("[scheduler] Gold price for {} already persisted — skipping", today);
             return;
         }
 
@@ -63,25 +75,36 @@ public class GoldPriceScheduler {
                     .build();
 
             goldPriceHistoryService.save(history);
-            log.info("Inserted gold price {} for date {} from GoldPricez", snapshot.getPrice(), today);
+            
+            consecutiveFailures.set(0);
+            lastSuccessfulFetch.set(LocalDateTime.now());
+            
+            log.info("[scheduler] SUCCESS: Persisted gold price {} for {} from GoldPricez", 
+                    snapshot.getPrice(), today);
 
         } catch (GoldApiUnavailableException e) {
-            log.error("[requestId={}] [errorType={}] GoldPricez API error during scheduled ingestion: {}",
-                    e.getRequestId(), e.getErrorType(), e.getMessage());
-            // Do not crash scheduler - will retry on next scheduled run
+            int failures = consecutiveFailures.incrementAndGet();
+            log.error("[scheduler] FAILED: [requestId={}] [errorType={}] [failures={}] {}",
+                    e.getRequestId(), e.getErrorType(), failures, e.getMessage());
         } catch (Exception e) {
-            log.error("Unexpected error during gold price ingestion: {}", e.getMessage(), e);
-            // Do not crash scheduler
+            int failures = consecutiveFailures.incrementAndGet();
+            log.error("[scheduler] FAILED: [failures={}] Unexpected error: {}", failures, e.getMessage(), e);
         }
     }
 
     /**
-     * Historical backfill is DISABLED for GoldPricez.
-     * GoldPricez API only supports real-time prices, not historical data.
-     * This method is kept for interface compatibility but does nothing.
+     * Historical backfill is NOT SUPPORTED by GoldPricez.
+     * History is built over time via scheduled snapshots.
      */
     public void backfillHistory(int lookbackDays, int fetchLimit) {
-        log.warn("Gold price historical backfill is DISABLED — GoldPricez does not support historical data");
-        // No-op: GoldPricez only provides real-time prices
+        log.warn("[scheduler] Historical backfill not supported — GoldPricez provides real-time data only");
+    }
+
+    public int getConsecutiveFailures() {
+        return consecutiveFailures.get();
+    }
+
+    public LocalDateTime getLastSuccessfulFetch() {
+        return lastSuccessfulFetch.get();
     }
 }

@@ -19,6 +19,15 @@ public class GoldPriceHistoryDto {
 
     private String unit;
     private List<DataPoint> points;
+    
+    @Builder.Default
+    private boolean historySupported = true;
+    
+    @Builder.Default
+    private boolean historicalAvailable = true;
+    
+    private String message;
+    private String source;
 
     @Getter
     @Setter

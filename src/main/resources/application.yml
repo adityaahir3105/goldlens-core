@@ -29,6 +29,16 @@ goldpricez:
   api:
     key: ${GOLDPRICEZ_API_KEY:}
 
+goldapi:
+  base-url: ${GOLDAPI_BASE_URL:https://www.goldapi.io/api}
+  api:
+    key: ${GOLDAPI_API_KEY:}
+
+# TODO: TEMPORARY - Remove after backfill is complete
+gold:
+  backfill:
+    enabled: ${gold.backfill.enabled:true}
+
 management:
   endpoints:
     web:

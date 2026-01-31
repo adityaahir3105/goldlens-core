@@ -27,9 +27,13 @@ public class GoldPriceController {
         this.goldPriceService = goldPriceService;
     }
 
+    /**
+     * Returns the latest gold price with caching (5 min TTL).
+     * Response includes: price, currency, unit, asOf, source, isLive, supportsHistory
+     */
     @GetMapping("/latest")
     public ResponseEntity<GoldPriceSnapshot> getLatestPrice() {
-        GoldPriceSnapshot snapshot = goldPriceService.getLatestPrice();
+        GoldPriceSnapshot snapshot = goldPriceService.getLatestPriceWithFallback();
         return ResponseEntity.ok(snapshot);
     }
 
@@ -45,8 +49,9 @@ public class GoldPriceController {
                 "message", ex.getMessage(),
                 "errorType", ex.getErrorType(),
                 "requestId", ex.getRequestId(),
-                "goldApiStatus", ex.getHttpStatus(),
-                "timestamp", Instant.now().toString()
+                "providerStatus", ex.getHttpStatus(),
+                "timestamp", Instant.now().toString(),
+                "supportsHistory", false
         );
 
         return ResponseEntity.status(status).body(errorBody);

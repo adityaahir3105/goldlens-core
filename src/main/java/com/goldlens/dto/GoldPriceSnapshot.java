@@ -21,4 +21,10 @@ public class GoldPriceSnapshot {
     private String unit;
     private LocalDateTime asOf;
     private String source;
+    
+    @Builder.Default
+    private boolean isLive = true;
+    
+    @Builder.Default
+    private boolean supportsHistory = false;
 }
