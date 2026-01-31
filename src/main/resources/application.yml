@@ -36,7 +36,7 @@ goldapi:
 
 gold:
   backfill:
-    enabled: false
+    enabled: ${GOLD_BACKFILL_ENABLED:false}
 
 management:
   endpoints:
