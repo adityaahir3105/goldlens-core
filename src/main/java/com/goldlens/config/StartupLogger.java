@@ -41,7 +41,7 @@ public class StartupLogger {
         // Log API key status
         logApiKeyStatus("FRED_API_KEY", environment.getProperty("fred.api.key"));
         logApiKeyStatus("GEMINI_API_KEY", environment.getProperty("gemini.api.key"));
-        logApiKeyStatus("GOLD_API_KEY", environment.getProperty("goldapi.api.key"));
+        logApiKeyStatus("GOLDPRICEZ_API_KEY", environment.getProperty("goldpricez.api.key"));
 
         // Log scheduler status
         log.info("RealYieldScheduler enabled (cron: 0 0 6 * * * - daily 06:00 UTC)");

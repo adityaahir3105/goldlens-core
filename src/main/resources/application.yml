@@ -24,9 +24,10 @@ gemini:
   api:
     key: ${GEMINI_API_KEY:}
 
-goldapi:
+goldpricez:
+  base-url: ${GOLDPRICEZ_BASE_URL:https://goldpricez.com/api}
   api:
-    key: ${GOLD_API_KEY:}
+    key: ${GOLDPRICEZ_API_KEY:}
 
 management:
   endpoints:

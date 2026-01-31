@@ -1,0 +1,359 @@
+{
+  "info": {
+    "_postman_id": "goldlens-api-collection-v1",
+    "name": "GoldLens API Collection",
+    "description": "Complete API collection for GoldLens Core backend - a gold market analysis and risk assessment platform.\n\nThis collection covers:\n- Health checks and actuator endpoints\n- Economic indicators data\n- Trading signals\n- Gold risk assessment\n- Gold price tracking\n- Weekly summaries\n- AI-powered explanations\n\n**Setup:**\n1. Import the corresponding environment (Local or Production)\n2. Select the environment before running requests\n3. All requests use `{{baseUrl}}` variable",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [],
+  "item": [
+    {
+      "name": "1. Health & Meta",
+      "description": "Health check and application metadata endpoints for monitoring service availability and status.",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["health"]
+            },
+            "description": "Basic health check endpoint to verify the service is running."
+          },
+          "response": []
+        },
+        {
+          "name": "Actuator Health",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/actuator/health",
+              "host": ["{{baseUrl}}"],
+              "path": ["actuator", "health"]
+            },
+            "description": "Spring Boot Actuator health endpoint providing detailed health status including database connectivity and external service availability."
+          },
+          "response": []
+        },
+        {
+          "name": "Actuator Info",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/actuator/info",
+              "host": ["{{baseUrl}}"],
+              "path": ["actuator", "info"]
+            },
+            "description": "Spring Boot Actuator info endpoint providing application metadata such as version, build info, and environment details."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "2. Indicators",
+      "description": "Economic indicators endpoints for retrieving market data such as real yields, inflation rates, and other macroeconomic metrics used in gold analysis.",
+      "item": [
+        {
+          "name": "Get All Indicators",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/indicators",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "indicators"]
+            },
+            "description": "Retrieves a list of all available economic indicators tracked by the system."
+          },
+          "response": []
+        },
+        {
+          "name": "Get Indicator Latest Value",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/indicators/{{indicatorCode}}/latest",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "indicators", "{{indicatorCode}}", "latest"]
+            },
+            "description": "Retrieves the most recent value for a specific indicator.\n\nCommon indicator codes:\n- US_10Y_REAL_YIELD\n- US_CPI\n- DXY_INDEX\n- FED_FUNDS_RATE"
+          },
+          "response": [
+            {
+              "name": "Example Response - Indicator Latest",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/indicators/US_10Y_REAL_YIELD/latest",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "indicators", "US_10Y_REAL_YIELD", "latest"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"code\": \"US_10Y_REAL_YIELD\",\n  \"name\": \"US 10-Year Real Yield\",\n  \"value\": 2.15,\n  \"unit\": \"%\",\n  \"date\": \"2026-01-30\",\n  \"source\": \"FRED\",\n  \"description\": \"The 10-Year Treasury Inflation-Indexed Security yield\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Indicator History",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/indicators/{{indicatorCode}}/history?days={{days}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "indicators", "{{indicatorCode}}", "history"],
+              "query": [
+                {
+                  "key": "days",
+                  "value": "{{days}}",
+                  "description": "Number of days of historical data to retrieve"
+                }
+              ]
+            },
+            "description": "Retrieves historical values for a specific indicator over the specified number of days."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "3. Signals",
+      "description": "Trading signals endpoints providing buy/sell/hold recommendations based on indicator analysis.",
+      "item": [
+        {
+          "name": "Get Signal Latest",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/signals/{{indicatorCode}}/latest",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "signals", "{{indicatorCode}}", "latest"]
+            },
+            "description": "Retrieves the latest trading signal for a specific indicator. Signals indicate whether current conditions are bullish, bearish, or neutral for gold."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "4. Gold Risk",
+      "description": "Gold risk assessment endpoints providing composite risk scores based on multiple economic indicators.",
+      "item": [
+        {
+          "name": "Get Gold Risk Latest",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/gold-risk/latest",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "gold-risk", "latest"]
+            },
+            "description": "Retrieves the latest gold risk assessment score. The risk score is a composite metric indicating overall market conditions for gold investment."
+          },
+          "response": [
+            {
+              "name": "Example Response - Gold Risk Latest",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/gold-risk/latest",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "gold-risk", "latest"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"riskScore\": 65.5,\n  \"riskLevel\": \"MODERATE\",\n  \"date\": \"2026-01-30\",\n  \"components\": {\n    \"realYieldRisk\": 70.0,\n    \"inflationRisk\": 55.0,\n    \"dollarRisk\": 60.0,\n    \"volatilityRisk\": 75.0\n  },\n  \"recommendation\": \"HOLD\",\n  \"summary\": \"Moderate risk environment for gold. Real yields remain elevated but inflation concerns provide support.\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "5. Gold Price",
+      "description": "Gold price endpoints for retrieving current and historical gold prices.",
+      "item": [
+        {
+          "name": "Get Gold Price Latest",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/gold-price/latest",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "gold-price", "latest"]
+            },
+            "description": "Retrieves the latest gold price in USD per troy ounce."
+          },
+          "response": [
+            {
+              "name": "Example Response - Gold Price Latest",
+              "originalRequest": {
+                "method": "GET",
+                "header": [],
+                "url": {
+                  "raw": "{{baseUrl}}/api/gold-price/latest",
+                  "host": ["{{baseUrl}}"],
+                  "path": ["api", "gold-price", "latest"]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"price\": 2045.30,\n  \"currency\": \"USD\",\n  \"unit\": \"troy ounce\",\n  \"timestamp\": \"2026-01-30T15:30:00Z\",\n  \"change24h\": 12.50,\n  \"changePercent24h\": 0.61,\n  \"source\": \"GoldAPI\"\n}"
+            }
+          ]
+        },
+        {
+          "name": "Get Gold Price History",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/gold/price/history?days={{days}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "gold", "price", "history"],
+              "query": [
+                {
+                  "key": "days",
+                  "value": "{{days}}",
+                  "description": "Number of days of historical price data to retrieve"
+                }
+              ]
+            },
+            "description": "Retrieves historical gold prices for the specified number of days."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "6. Summary",
+      "description": "Summary endpoints providing aggregated market analysis and reports.",
+      "item": [
+        {
+          "name": "Get Weekly Summary",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/summary/weekly",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "summary", "weekly"]
+            },
+            "description": "Retrieves a comprehensive weekly summary including gold price trends, indicator changes, signals, and risk assessment overview."
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "7. AI Explanations",
+      "description": "AI-powered explanation endpoints that provide natural language analysis and insights for indicators, signals, and risk assessments.",
+      "item": [
+        {
+          "name": "Explain Indicator",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"indicatorCode\": \"US_10Y_REAL_YIELD\",\n  \"value\": 2.15,\n  \"date\": \"2026-01-30\",\n  \"context\": {\n    \"previousValue\": 2.05,\n    \"changePercent\": 4.88,\n    \"trend\": \"RISING\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/ai/explain/indicator",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ai", "explain", "indicator"]
+            },
+            "description": "Generates an AI-powered explanation of an economic indicator's current value, its significance, and potential impact on gold prices."
+          },
+          "response": []
+        },
+        {
+          "name": "Explain Signal",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"indicatorCode\": \"US_10Y_REAL_YIELD\",\n  \"signal\": \"BEARISH\",\n  \"strength\": 0.75,\n  \"date\": \"2026-01-30\",\n  \"triggerConditions\": [\n    \"Real yield above 2% threshold\",\n    \"Rising trend over 5 days\"\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/ai/explain/signal",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ai", "explain", "signal"]
+            },
+            "description": "Generates an AI-powered explanation of a trading signal, including the reasoning behind the recommendation and key factors to consider."
+          },
+          "response": []
+        },
+        {
+          "name": "Explain Gold Risk",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"riskScore\": 65.5,\n  \"riskLevel\": \"MODERATE\",\n  \"date\": \"2026-01-30\",\n  \"components\": {\n    \"realYieldRisk\": 70.0,\n    \"inflationRisk\": 55.0,\n    \"dollarRisk\": 60.0,\n    \"volatilityRisk\": 75.0\n  },\n  \"recentChanges\": [\n    {\n      \"component\": \"realYieldRisk\",\n      \"change\": 5.0,\n      \"direction\": \"UP\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/ai/explain/gold-risk",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "ai", "explain", "gold-risk"]
+            },
+            "description": "Generates an AI-powered explanation of the gold risk assessment, breaking down the composite score and explaining the contribution of each risk component."
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

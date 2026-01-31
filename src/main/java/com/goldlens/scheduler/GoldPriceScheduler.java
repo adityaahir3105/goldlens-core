@@ -1,7 +1,8 @@
 package com.goldlens.scheduler;
 
-import com.goldlens.client.GoldPriceClient;
+import com.goldlens.client.GoldPricezClient;
 import com.goldlens.domain.GoldPriceHistory;
+import com.goldlens.exception.GoldApiUnavailableException;
 import com.goldlens.service.GoldPriceHistoryService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -10,109 +11,77 @@ import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
 
+/**
+ * Scheduler for gold price ingestion using GoldPricez API.
+ * 
+ * Note: GoldPricez only supports real-time prices, not historical data.
+ * Historical backfill is disabled.
+ * 
+ * Rate limit: 30-60 requests/hour, so we run every 15 minutes (4 req/hour).
+ */
 @Component
 public class GoldPriceScheduler {
 
     private static final Logger log = LoggerFactory.getLogger(GoldPriceScheduler.class);
 
-    private static final String SOURCE = "GoldAPI";
+    private static final String SOURCE = "GoldPricez";
 
-    private final GoldPriceClient goldPriceClient;
+    private final GoldPricezClient goldPricezClient;
     private final GoldPriceHistoryService goldPriceHistoryService;
 
-    public GoldPriceScheduler(GoldPriceClient goldPriceClient, GoldPriceHistoryService goldPriceHistoryService) {
-        this.goldPriceClient = goldPriceClient;
+    public GoldPriceScheduler(GoldPricezClient goldPricezClient, GoldPriceHistoryService goldPriceHistoryService) {
+        this.goldPricezClient = goldPricezClient;
         this.goldPriceHistoryService = goldPriceHistoryService;
     }
 
-    // Every 15 minutes - gold spot price changes frequently during trading hours
+    /**
+     * Fetches latest gold price from GoldPricez and persists for analytics/history.
+     * Runs every 15 minutes to stay well within rate limits (30-60 req/hour).
+     */
     @Scheduled(cron = "0 */15 * * * *")
     public void ingestLatestGoldPrice() {
-        log.info("Starting daily gold price ingestion via GoldAPI");
+        log.info("Starting gold price ingestion via GoldPricez");
 
-        if (!goldPriceClient.isConfigured()) {
-            log.warn("GoldAPI not configured — skipping daily ingestion");
+        if (!goldPricezClient.isConfigured()) {
+            log.warn("GoldPricez not configured — skipping ingestion");
             return;
         }
 
         LocalDate today = LocalDate.now();
         if (goldPriceHistoryService.existsByDate(today)) {
-            log.info("Gold price for {} already exists — skipping", today);
+            log.info("Gold price for {} already exists — skipping persistence", today);
             return;
         }
 
-        goldPriceClient.fetchCurrentPrice().ifPresentOrElse(
-                snapshot -> {
-                    GoldPriceHistory history = GoldPriceHistory.builder()
-                            .date(today)
-                            .price(snapshot.getPrice())
-                            .source(SOURCE)
-                            .build();
-
-                    goldPriceHistoryService.save(history);
-                    log.info("Inserted gold price {} for date {}", snapshot.getPrice(), today);
-                },
-                () -> log.warn("No gold price available from GoldAPI")
-        );
-    }
-
-    /**
-     * Backfills historical gold prices from GoldAPI.
-     * Called on application startup via HistoricalBackfillService.
-     */
-    public void backfillHistory(int lookbackDays, int fetchLimit) {
-        log.info("Starting gold price historical backfill via GoldAPI");
-
-        if (!goldPriceClient.isConfigured()) {
-            log.warn("GoldAPI not configured — skipping backfill");
-            return;
-        }
-
-        long currentCount = goldPriceHistoryService.count();
-        if (currentCount >= 30) {
-            log.info("Gold price backfill skipped — sufficient history exists ({} rows)", currentCount);
-            return;
-        }
-
-        LocalDate today = LocalDate.now();
-        int insertedCount = 0;
-        int skippedCount = 0;
-        int noDataCount = 0;
-
-        // Fetch day by day, starting from most recent
-        for (int i = 1; i <= lookbackDays && insertedCount < fetchLimit; i++) {
-            LocalDate date = today.minusDays(i);
-
-            // Skip if already exists (idempotent)
-            if (goldPriceHistoryService.existsByDate(date)) {
-                skippedCount++;
-                continue;
-            }
-
-            // Fetch price for this date
-            var priceOpt = goldPriceClient.fetchPriceForDate(date);
-            if (priceOpt.isEmpty()) {
-                noDataCount++;
-                continue;
-            }
+        try {
+            var snapshot = goldPricezClient.fetchLatestGoldPrice();
 
             GoldPriceHistory history = GoldPriceHistory.builder()
-                    .date(priceOpt.get().date())
-                    .price(priceOpt.get().price())
+                    .date(today)
+                    .price(snapshot.getPrice())
                     .source(SOURCE)
                     .build();
 
             goldPriceHistoryService.save(history);
-            insertedCount++;
+            log.info("Inserted gold price {} for date {} from GoldPricez", snapshot.getPrice(), today);
 
-            // Log progress every 10 inserts
-            if (insertedCount % 10 == 0) {
-                log.info("Gold price backfill progress: {} rows inserted", insertedCount);
-            }
+        } catch (GoldApiUnavailableException e) {
+            log.error("[requestId={}] [errorType={}] GoldPricez API error during scheduled ingestion: {}",
+                    e.getRequestId(), e.getErrorType(), e.getMessage());
+            // Do not crash scheduler - will retry on next scheduled run
+        } catch (Exception e) {
+            log.error("Unexpected error during gold price ingestion: {}", e.getMessage(), e);
+            // Do not crash scheduler
         }
+    }
 
-        long finalCount = goldPriceHistoryService.count();
-        log.info("Gold price backfill completed: inserted {} rows, skipped {} duplicates, {} non-trading days, total rows now: {}",
-                insertedCount, skippedCount, noDataCount, finalCount);
+    /**
+     * Historical backfill is DISABLED for GoldPricez.
+     * GoldPricez API only supports real-time prices, not historical data.
+     * This method is kept for interface compatibility but does nothing.
+     */
+    public void backfillHistory(int lookbackDays, int fetchLimit) {
+        log.warn("Gold price historical backfill is DISABLED — GoldPricez does not support historical data");
+        // No-op: GoldPricez only provides real-time prices
     }
 }
