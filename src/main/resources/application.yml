@@ -37,6 +37,9 @@ goldapi:
 gold:
   backfill:
     enabled: true
+  etf:
+    backfill:
+      enabled: ${GOLD_ETF_BACKFILL_ENABLED:true}
 
 news:
   primary:
