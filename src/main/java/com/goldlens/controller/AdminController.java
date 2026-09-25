@@ -19,6 +19,19 @@ public class AdminController {
 
     private final GoldEtfExcelImporter excelImporter;
     private final GoldEtfFlowService etfFlowService;
+    private final com.goldlens.service.HistoricalBackfillService historicalBackfillService;
+
+    @PostMapping("/backfill-macro")
+    public ResponseEntity<String> backfillMacro() {
+        try {
+            log.info("Starting manual macro backfill (FRED & Gold Prices)");
+            historicalBackfillService.runBackfillIfNeeded();
+            return ResponseEntity.ok("Macro backfill executed successfully.");
+        } catch (Exception e) {
+            log.error("Failed to execute macro backfill", e);
+            return ResponseEntity.internalServerError().body("Error: " + e.getMessage());
+        }
+    }
 
     @PostMapping("/backfill-wgc")
     public ResponseEntity<String> backfillWgc(@RequestParam("file") MultipartFile file) {
