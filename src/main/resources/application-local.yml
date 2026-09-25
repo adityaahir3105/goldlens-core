@@ -1,0 +1,51 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5433/goldlens
+    username: goldlens
+    password: goldlens
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: create
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+server:
+  port: 8081
+
+fred:
+  api:
+    key: 746758f93af3e55784168ba33503134a
+
+gemini:
+  api:
+    key: AIzaSyCP2KknOMVbSMyTKY4EJm8zqEWVFDLCGug
+
+goldapi:
+  base-url: ${GOLDAPI_BASE_URL:https://www.goldapi.io/api}
+  api:
+    key: goldapi-3bd911fsml25bmz3-io
+
+goldpricez:
+  api:
+    key: 834183c205a2e22981108866efb65c26834183c2
+
+gold:
+  backfill:
+    enabled: ${GOLD_BACKFILL_ENABLED:false}
+  
+
+
+news:
+  primary:
+    provider: newsapi
+    api-key: 7f4a5cca9b204099a1c28da79d84a064
+    base-url: https://newsapi.org/v2
+  fallback:
+    provider: gnews
+    api-key: 29fb09118e72a41f8f0cf0667ac65c77
+    base-url: https://gnews.io/api/v4

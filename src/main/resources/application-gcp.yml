@@ -1,0 +1,18 @@
+# GCP Cloud Run profile - uses Cloud SQL socket factory for Unix socket connections
+spring:
+  datasource:
+    url: jdbc:postgresql:///${PGDATABASE:goldlens}?cloudSqlInstance=${CLOUD_SQL_CONNECTION_NAME}&socketFactory=com.google.cloud.sql.postgres.SocketFactory
+    username: ${PGUSER:postgres}
+    password: ${PGPASSWORD}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+
+logging:
+  level:
+    com.goldlens: INFO
+    org.hibernate.SQL: WARN
+    org.springframework: WARN
