@@ -38,10 +38,18 @@ public class GoldEtfExcelImporter {
     private static final String[] REGIONS = {"North America", "Europe", "Asia", "Other"};
 
     public List<GoldEtfFlow> parseExcel() {
+        try (InputStream is = new ClassPathResource(EXCEL_FILE).getInputStream()) {
+            return parseExcel(is);
+        } catch (Exception e) {
+            log.error("Error reading default Excel file: {}", e.getMessage(), e);
+            return new ArrayList<>();
+        }
+    }
+
+    public List<GoldEtfFlow> parseExcel(InputStream is) {
         Map<String, GoldEtfFlow> flowMap = new LinkedHashMap<>();
 
-        try (InputStream is = new ClassPathResource(EXCEL_FILE).getInputStream();
-             Workbook workbook = new XSSFWorkbook(is)) {
+        try (Workbook workbook = new XSSFWorkbook(is)) {
 
             Sheet sheet = workbook.getSheet(SHEET_NAME);
             if (sheet == null) {
