@@ -49,5 +49,4 @@ jobs:
           project_id: ${{ env.PROJECT_ID }}
           flags: |
             --add-cloudsql-instances=${{ env.PROJECT_ID }}:${{ env.REGION }}:goldlens-db
-            --set-env-vars=CLOUD_SQL_CONNECTION_NAME=${{ env.PROJECT_ID }}:${{ env.REGION }}:goldlens-db,PGDATABASE=goldlens,PGUSER=postgres,SPRING_PROFILES_ACTIVE=gcp
-            --set-secrets=PGPASSWORD=goldlens-db-password:latest,FRED_API_KEY=fred-api-key:latest,GEMINI_API_KEY=gemini-api-key:latest,GOLDPRICEZ_API_KEY=goldpricez-api-key:latest,GOLD_API_KEY=gold-api-key:latest,NEWS_API_KEY=news-api-key:latest,GNEWS_API_KEY=gnews-api-key:latest
+            --set-env-vars=CLOUD_SQL_CONNECTION_NAME=${{ env.PROJECT_ID }}:${{ env.REGION }}:goldlens-db,PGDATABASE=goldlens,PGUSER=postgres,PGPASSWORD=GoldLens2026!,SPRING_PROFILES_ACTIVE=gcp,FRED_API_KEY=,GEMINI_API_KEY=,GOLDPRICEZ_API_KEY=,GOLD_API_KEY=,NEWS_API_KEY=,GNEWS_API_KEY=
