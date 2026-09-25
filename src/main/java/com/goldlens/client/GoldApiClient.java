@@ -19,16 +19,9 @@ import java.util.Map;
 import java.util.Optional;
 
 /**
- * TODO: TEMPORARY BACKFILL LOGIC - Remove after historical data is populated.
- * 
- * GoldAPI client for ONE-TIME historical backfill only.
- * This client is only active when gold.backfill.enabled=true.
- * 
- * After backfill is complete, set gold.backfill.enabled=false and remove this class.
- * Runtime gold price fetching uses GoldPricezClient instead.
+ * GoldAPI client for fetching real-time and historical gold prices.
  */
 @Component
-@ConditionalOnProperty(name = "gold.backfill.enabled", havingValue = "true", matchIfMissing = false)
 public class GoldApiClient {
 
     private static final Logger log = LoggerFactory.getLogger(GoldApiClient.class);
@@ -103,6 +96,46 @@ public class GoldApiClient {
         } catch (Exception e) {
             log.error("[backfill] Unexpected error fetching price for {}: {}", date, e.getMessage());
             return Optional.empty();
+        }
+    }
+
+    public com.goldlens.dto.GoldPriceSnapshot fetchLatestGoldPrice() {
+        if (apiKey == null || apiKey.isBlank()) {
+            throw new com.goldlens.exception.GoldApiUnavailableException("GoldAPI key not configured", 503, "CONFIG_ERROR", "N/A");
+        }
+        
+        try {
+            String responseBody = webClient.get()
+                    .uri("/XAU/USD")
+                    .header("x-access-token", apiKey)
+                    .retrieve()
+                    .bodyToMono(String.class)
+                    .block();
+
+            if (responseBody == null || responseBody.isBlank()) {
+                throw new com.goldlens.exception.GoldApiUnavailableException("GoldAPI returned null response", 502, "NULL_RESPONSE", "N/A");
+            }
+
+            @SuppressWarnings("unchecked")
+            Map<String, Object> response = objectMapper.readValue(responseBody, Map.class);
+            Object priceObj = response.get("price");
+            if (priceObj == null) {
+                throw new com.goldlens.exception.GoldApiUnavailableException("GoldAPI response missing price field", 502, "INVALID_RESPONSE", "N/A");
+            }
+
+            BigDecimal price = new BigDecimal(priceObj.toString());
+            return com.goldlens.dto.GoldPriceSnapshot.builder()
+                    .price(price)
+                    .currency("USD")
+                    .unit("oz")
+                    .asOf(java.time.LocalDateTime.now())
+                    .source(SOURCE)
+                    .build();
+
+        } catch (WebClientResponseException e) {
+            throw new com.goldlens.exception.GoldApiUnavailableException("GoldAPI request failed: " + e.getMessage(), e.getStatusCode().value(), "API_ERROR", "N/A", e);
+        } catch (Exception e) {
+            throw new com.goldlens.exception.GoldApiUnavailableException("Failed to fetch gold price from GoldAPI: " + e.getMessage(), 502, "UNEXPECTED_ERROR", "N/A", e);
         }
     }
 

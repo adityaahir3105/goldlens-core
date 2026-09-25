@@ -1,6 +1,5 @@
 package com.goldlens.service;
 
-import com.goldlens.client.GoldPricezClient;
 import com.goldlens.config.CacheConfig;
 import com.goldlens.dto.GoldPriceSnapshot;
 import com.goldlens.exception.GoldApiUnavailableException;
@@ -17,11 +16,11 @@ public class GoldPriceService {
     private static final Logger log = LoggerFactory.getLogger(GoldPriceService.class);
     private static final String CACHE_KEY = CacheConfig.GOLD_PRICE_CACHE_KEY;
 
-    private final GoldPricezClient goldPricezClient;
+    private final com.goldlens.client.GoldApiClient goldApiClient;
     private final CacheManager cacheManager;
 
-    public GoldPriceService(GoldPricezClient goldPricezClient, CacheManager cacheManager) {
-        this.goldPricezClient = goldPricezClient;
+    public GoldPriceService(com.goldlens.client.GoldApiClient goldApiClient, CacheManager cacheManager) {
+        this.goldApiClient = goldApiClient;
         this.cacheManager = cacheManager;
     }
 
@@ -56,7 +55,7 @@ public class GoldPriceService {
     }
 
     private GoldPriceSnapshot fetchLivePrice() {
-        GoldPriceSnapshot snapshot = goldPricezClient.fetchLatestGoldPrice();
+        GoldPriceSnapshot snapshot = goldApiClient.fetchLatestGoldPrice();
         snapshot.setLive(true);
         snapshot.setSupportsHistory(false);
         return snapshot;
