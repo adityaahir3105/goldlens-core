@@ -44,7 +44,7 @@ gold:
     enabled: true
   etf:
     backfill:
-      enabled: ${GOLD_ETF_BACKFILL_ENABLED:true}
+      enabled: ${GOLD_ETF_BACKFILL_ENABLED:false}
 
 news:
   primary:

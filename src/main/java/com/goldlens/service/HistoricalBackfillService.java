@@ -63,8 +63,21 @@ public class HistoricalBackfillService {
 
     @EventListener(ApplicationReadyEvent.class)
     public void onApplicationReady() {
-        log.info("Application ready — checking if historical backfill is needed");
-        runBackfillIfNeeded();
+        log.info("Application ready — scheduling background backfill");
+        Thread backfillThread = new Thread(() -> {
+            try {
+                // Small delay to let the app fully settle
+                Thread.sleep(5000);
+                runBackfillIfNeeded();
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                log.warn("Backfill thread interrupted");
+            } catch (Exception e) {
+                log.error("Background backfill failed", e);
+            }
+        }, "backfill-thread");
+        backfillThread.setDaemon(true);
+        backfillThread.start();
     }
 
     /**
