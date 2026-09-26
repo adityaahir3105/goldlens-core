@@ -134,7 +134,8 @@ public class HistoricalBackfillService {
         int maxApiCalls = 50; // conservative limit per backfill run (free tier = ~300/month)
         int apiCallsMade = 0;
 
-        for (LocalDate date = startDate; !date.isAfter(today) && apiCallsMade < maxApiCalls; date = date.plusDays(1)) {
+        // Iterate from most recent to oldest so the dashboard has current data first
+        for (LocalDate date = today; !date.isBefore(startDate) && apiCallsMade < maxApiCalls; date = date.minusDays(1)) {
             // Skip weekends — gold markets closed
             java.time.DayOfWeek dow = date.getDayOfWeek();
             if (dow == java.time.DayOfWeek.SATURDAY || dow == java.time.DayOfWeek.SUNDAY) {

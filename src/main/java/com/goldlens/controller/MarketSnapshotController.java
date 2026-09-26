@@ -19,7 +19,7 @@ public class MarketSnapshotController {
 
     @GetMapping("/snapshot")
     public MarketSnapshotDto getMarketSnapshot(@RequestParam(defaultValue = "30") int days) {
-        int cappedDays = Math.min(Math.max(days, 1), 120);
+        int cappedDays = Math.min(Math.max(days, 1), 365);
         return marketSnapshotService.getMarketSnapshot(cappedDays);
     }
 }
