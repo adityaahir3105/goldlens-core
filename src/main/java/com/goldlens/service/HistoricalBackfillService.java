@@ -20,8 +20,8 @@ public class HistoricalBackfillService {
     private static final Logger log = LoggerFactory.getLogger(HistoricalBackfillService.class);
 
     private static final int REQUIRED_HISTORY = 30;
-    private static final int FETCH_LIMIT = 100;
-    private static final int LOOKBACK_DAYS = 90;
+    private static final int FETCH_LIMIT = 500;
+    private static final int LOOKBACK_DAYS = 365;
 
     private static final String SOURCE = "FRED";
 
@@ -42,17 +42,23 @@ public class HistoricalBackfillService {
     private final IndicatorValueService indicatorValueService;
     private final SignalEngineService signalEngineService;
     private final GoldPriceScheduler goldPriceScheduler;
+    private final com.goldlens.client.GoldApiClient goldApiClient;
+    private final GoldPriceHistoryService goldPriceHistoryService;
 
     public HistoricalBackfillService(FredClient fredClient,
                                      IndicatorService indicatorService,
                                      IndicatorValueService indicatorValueService,
                                      SignalEngineService signalEngineService,
-                                     GoldPriceScheduler goldPriceScheduler) {
+                                     GoldPriceScheduler goldPriceScheduler,
+                                     com.goldlens.client.GoldApiClient goldApiClient,
+                                     GoldPriceHistoryService goldPriceHistoryService) {
         this.fredClient = fredClient;
         this.indicatorService = indicatorService;
         this.indicatorValueService = indicatorValueService;
         this.signalEngineService = signalEngineService;
         this.goldPriceScheduler = goldPriceScheduler;
+        this.goldApiClient = goldApiClient;
+        this.goldPriceHistoryService = goldPriceHistoryService;
     }
 
     @EventListener(ApplicationReadyEvent.class)
@@ -67,13 +73,13 @@ public class HistoricalBackfillService {
      * This method is idempotent and safe to call multiple times.
      */
     public void runBackfillIfNeeded() {
-        // Backfill macro indicators
+        // Backfill macro indicators from FRED
         for (String indicatorCode : INDICATOR_SERIES_MAP.keySet()) {
             backfillIndicatorIfNeeded(indicatorCode);
         }
 
-        // Backfill gold price history
-        goldPriceScheduler.backfillHistory(LOOKBACK_DAYS, FETCH_LIMIT);
+        // Backfill gold price history using GoldAPI
+        backfillGoldPriceHistory();
 
         // After backfill, ensure signals are computed for all indicators
         computeSignalsForAllIndicators();
@@ -89,6 +95,77 @@ public class HistoricalBackfillService {
                 signalEngineService.computeAndStoreSignal(indicator, today);
             });
         }
+    }
+
+    /**
+     * Backfills gold price history using GoldAPI.io date-specific endpoint.
+     * Only fetches for dates not already in the database.
+     * Skips weekends (gold markets closed).
+     * Rate-limited: 1 second delay between API calls.
+     */
+    private void backfillGoldPriceHistory() {
+        if (!goldApiClient.isConfigured()) {
+            log.warn("GoldAPI not configured — skipping gold price backfill");
+            return;
+        }
+
+        long existingCount = goldPriceHistoryService.count();
+        log.info("Gold price history has {} existing records", existingCount);
+
+        LocalDate today = LocalDate.now();
+        LocalDate startDate = today.minusDays(LOOKBACK_DAYS);
+
+        int inserted = 0;
+        int skipped = 0;
+        int errors = 0;
+        int maxApiCalls = 50; // conservative limit per backfill run (free tier = ~300/month)
+        int apiCallsMade = 0;
+
+        for (LocalDate date = startDate; !date.isAfter(today) && apiCallsMade < maxApiCalls; date = date.plusDays(1)) {
+            // Skip weekends — gold markets closed
+            java.time.DayOfWeek dow = date.getDayOfWeek();
+            if (dow == java.time.DayOfWeek.SATURDAY || dow == java.time.DayOfWeek.SUNDAY) {
+                continue;
+            }
+
+            // Skip dates already in DB
+            if (goldPriceHistoryService.existsByDate(date)) {
+                skipped++;
+                continue;
+            }
+
+            try {
+                apiCallsMade++;
+                var priceOpt = goldApiClient.fetchPriceForDate(date);
+                if (priceOpt.isPresent()) {
+                    var hp = priceOpt.get();
+                    com.goldlens.domain.GoldPriceHistory history = com.goldlens.domain.GoldPriceHistory.builder()
+                            .date(hp.date())
+                            .price(hp.price())
+                            .source("GoldAPI")
+                            .build();
+                    goldPriceHistoryService.save(history);
+                    inserted++;
+                    log.info("[gold-backfill] Saved {} for date {}", hp.price(), hp.date());
+                } else {
+                    errors++;
+                }
+
+                // Rate limit: 1 second between calls
+                Thread.sleep(1000);
+
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                log.warn("[gold-backfill] Interrupted during backfill");
+                break;
+            } catch (Exception e) {
+                errors++;
+                log.warn("[gold-backfill] Failed to fetch price for {}: {}", date, e.getMessage());
+            }
+        }
+
+        log.info("[gold-backfill] Completed: inserted={}, skipped={}, errors={}, apiCalls={}",
+                inserted, skipped, errors, apiCallsMade);
     }
 
     private void backfillIndicatorIfNeeded(String indicatorCode) {
@@ -107,15 +184,8 @@ public class HistoricalBackfillService {
         long currentCount = indicatorValueService.countByIndicator(indicator);
         log.info("Indicator {} has {} existing data points", indicatorCode, currentCount);
 
-        if (currentCount >= REQUIRED_HISTORY) {
-            log.info("Backfill skipped for {} — sufficient history exists ({} >= {})",
-                    indicatorCode, currentCount, REQUIRED_HISTORY);
-            return;
-        }
-
-        // Need to backfill
-        log.info("Starting backfill for {} — current count {} is below required {}",
-                indicatorCode, currentCount, REQUIRED_HISTORY);
+        // Always backfill to fill any gaps (don't skip based on count alone)
+        log.info("Starting backfill for {} (current count: {})", indicatorCode, currentCount);
 
         LocalDate startDate = LocalDate.now().minusDays(LOOKBACK_DAYS);
         List<FredClient.FredObservation> observations = fredClient.fetchHistoricalObservations(
