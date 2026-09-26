@@ -10,6 +10,8 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 @RestController
 @RequestMapping("/api/admin")
@@ -21,16 +23,20 @@ public class AdminController {
     private final GoldEtfFlowService etfFlowService;
     private final com.goldlens.service.HistoricalBackfillService historicalBackfillService;
 
+    private final ExecutorService backfillExecutor = Executors.newSingleThreadExecutor();
+
     @PostMapping("/backfill-macro")
     public ResponseEntity<String> backfillMacro() {
-        try {
-            log.info("Starting manual macro backfill (FRED & Gold Prices)");
-            historicalBackfillService.runBackfillIfNeeded();
-            return ResponseEntity.ok("Macro backfill executed successfully.");
-        } catch (Exception e) {
-            log.error("Failed to execute macro backfill", e);
-            return ResponseEntity.internalServerError().body("Error: " + e.getMessage());
-        }
+        log.info("Starting manual macro backfill (FRED & Gold Prices) — running async");
+        backfillExecutor.submit(() -> {
+            try {
+                historicalBackfillService.runBackfillIfNeeded();
+                log.info("Async macro backfill completed successfully");
+            } catch (Exception e) {
+                log.error("Async macro backfill failed", e);
+            }
+        });
+        return ResponseEntity.ok("Macro backfill started in background. Check logs for progress.");
     }
 
     @PostMapping("/backfill-wgc")
