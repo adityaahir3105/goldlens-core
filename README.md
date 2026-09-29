@@ -87,13 +87,20 @@ takes several runs and may exceed the GoldAPI free-tier quota.
 
 ## First Start Behavior
 
-On first startup (or when data is insufficient):
+On every startup (`HistoricalBackfillService`, on `ApplicationReadyEvent`):
 
-1. **Historical Backfill** - Fetches last 90 days of macro indicator data from FRED
-2. **Gold Price Backfill** - Fetches last 90 days of gold prices from GoldAPI
-3. **Signal Computation** - Generates signals for all indicators
+1. **Macro backfill** - fills missing days of the last 365 days of FRED indicators
+2. **Signal computation** - generates today's signals for all indicators
+3. **Risk snapshot** - computes today's gold risk snapshot
 
-This runs automatically via `HistoricalBackfillService` on `ApplicationReadyEvent`.
+Gold price history is **not** backfilled on startup, because the free GoldAPI plan allows only
+100 requests a month and Cloud Run restarts the service often. Fill it on demand with
+`POST /api/admin/backfill-macro` (at most 50 GoldAPI calls per run).
+
+`/api/gold-price/latest` calls GoldAPI at most once a day: it serves today's stored price when
+there is one, stores a fresh price as today's value, and after a failed call waits 6 hours before
+trying again, serving the most recent stored price meanwhile. News responses are cached for
+30 minutes (10 minutes when empty).
 
 ## API Endpoints
 

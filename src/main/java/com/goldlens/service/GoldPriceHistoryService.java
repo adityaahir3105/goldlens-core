@@ -6,6 +6,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class GoldPriceHistoryService {
@@ -26,6 +27,10 @@ public class GoldPriceHistoryService {
 
     public List<GoldPriceHistory> findHistorySince(LocalDate sinceDate) {
         return repository.findByDateGreaterThanEqualOrderByDateAsc(sinceDate);
+    }
+
+    public Optional<GoldPriceHistory> findLatest() {
+        return repository.findTopByOrderByDateDesc();
     }
 
     public long count() {
