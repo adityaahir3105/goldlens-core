@@ -41,7 +41,9 @@ jobs:
 
       - name: Build and Push Docker Image
         run: |
-          gcloud builds submit --tag ${{ env.IMAGE }}:${{ github.sha }} --project=${{ env.PROJECT_ID }} --region=${{ env.REGION }}
+          # --suppress-logs: streaming needs project Viewer on the default logs bucket; the step still
+          # waits for the build and fails if it fails. Build logs are in the Cloud Build console.
+          gcloud builds submit --tag ${{ env.IMAGE }}:${{ github.sha }} --project=${{ env.PROJECT_ID }} --region=${{ env.REGION }} --suppress-logs
 
       - name: Deploy to Cloud Run
         uses: google-github-actions/deploy-cloudrun@v2

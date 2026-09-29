@@ -16,6 +16,11 @@
 
 set -euo pipefail
 
+# Never block on a hidden gcloud prompt, and bill API quota to the target project rather than
+# whatever billing/quota_project the local gcloud config happens to have.
+export CLOUDSDK_CORE_DISABLE_PROMPTS=1
+export CLOUDSDK_BILLING_QUOTA_PROJECT="${PROJECT_ID:-goldlens-prod-2026}"
+
 PROJECT_ID="${PROJECT_ID:-goldlens-prod-2026}"
 REGION="${REGION:-asia-south1}"
 AR_REPO="${AR_REPO:-goldlens-repo}"
