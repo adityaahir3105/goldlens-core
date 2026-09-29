@@ -51,16 +51,17 @@ DB_PASSWORD=${{Postgres.PGPASSWORD}}
 ### Google Cloud Run + Cloud SQL
 
 Pushes to `main` deploy via `.github/workflows/deploy.yml`. Secrets live in Secret Manager,
-not in the workflow. Before the first deploy (or after the project was cleaned up), run the
-setup script once in Cloud Shell as a project owner:
+not in the workflow. Before the first deploy, run the setup script once with gcloud, logged in
+as an owner of the `goldlens-prod-2026` project:
 
 ```bash
-DEPLOY_SA=<value of the SA_EMAIL GitHub secret> bash deploy/gcp-setup.sh
+bash deploy/gcp-setup.sh
 ```
 
 It creates the Cloud SQL Postgres instance, database and app user, the Secret Manager secrets
-(it prompts for each API key), a runtime service account, and the IAM bindings the deploy needs.
-It is safe to re-run.
+(it prompts for each API key), the runtime and deploy service accounts, Workload Identity
+Federation for GitHub Actions, and the IAM bindings the deploy needs. It prints the
+`WIF_PROVIDER` and `SA_EMAIL` values to add as GitHub secrets. It is safe to re-run.
 
 After the service is up, fill the database up to today (FRED indicators, gold prices, signals,
 risk snapshot) and load the World Gold Council ETF file:
