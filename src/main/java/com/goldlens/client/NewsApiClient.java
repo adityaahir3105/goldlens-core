@@ -23,7 +23,7 @@ public class NewsApiClient {
     private static final Logger log = LoggerFactory.getLogger(NewsApiClient.class);
 
     private static final String PROVIDER_NAME = "newsapi";
-    private static final int MAX_ARTICLES = 10;
+    private static final int MAX_ARTICLES = 30;
 
     private final WebClient webClient;
     private final ObjectMapper objectMapper;
@@ -49,13 +49,15 @@ public class NewsApiClient {
         try {
             String fromDate = Instant.now().minus(72, ChronoUnit.HOURS).toString().substring(0, 10);
             
-            // Strict gold-focused query - only gold and macro factors affecting gold
-            String query = "gold OR \"gold price\" OR \"precious metals\" OR \"Federal Reserve\" OR \"interest rate\" OR \"real yields\" OR DXY OR \"central bank\"";
+            // Gold-market terms matched in titles only: a full-text "gold OR Federal Reserve OR ..."
+            // search mostly returned articles that merely mention one of the words somewhere.
+            String query = "\"gold price\" OR \"gold prices\" OR \"spot gold\" OR \"gold futures\" OR bullion OR \"precious metals\" OR \"gold rate\" OR \"gold demand\"";
 
             String responseBody = webClient.get()
                     .uri(uriBuilder -> uriBuilder
                             .path("/everything")
                             .queryParam("q", query)
+                            .queryParam("searchIn", "title")
                             .queryParam("from", fromDate)
                             .queryParam("sortBy", "relevancy")
                             .queryParam("language", "en")

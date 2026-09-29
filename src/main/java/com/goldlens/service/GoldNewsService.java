@@ -22,7 +22,8 @@ public class GoldNewsService {
 
     private static final Logger log = LoggerFactory.getLogger(GoldNewsService.class);
 
-    private static final int MIN_VALID_ARTICLES = 3;
+    // Show any relevant articles; below this many, GNews is asked to top up the list.
+    private static final int TARGET_ARTICLES = 3;
     private static final int MAX_ARTICLES_TO_RETURN = 6;
 
     // Keywords that indicate article is relevant to gold
@@ -105,7 +106,7 @@ public class GoldNewsService {
         }
 
         // Top up from GNews when the primary didn't yield enough relevant articles
-        if (relevant.size() < MIN_VALID_ARTICLES && gNewsClient.isConfigured()) {
+        if (relevant.size() < TARGET_ARTICLES && gNewsClient.isConfigured()) {
             log.info("[GoldNews] {} relevant articles from primary, trying fallback", relevant.size());
             addRelevant(gNewsClient.fetchGoldNews(), gNewsClient.getProviderName(), relevant, providers);
         }
@@ -114,10 +115,8 @@ public class GoldNewsService {
                 .limit(MAX_ARTICLES_TO_RETURN)
                 .collect(Collectors.toList());
 
-        // If fewer than MIN_VALID_ARTICLES remain, return empty (don't pad with junk)
-        if (filteredItems.size() < MIN_VALID_ARTICLES) {
-            log.warn("[GoldNews] Only {} relevant articles found (min: {}), returning empty list",
-                    filteredItems.size(), MIN_VALID_ARTICLES);
+        if (filteredItems.isEmpty()) {
+            log.warn("[GoldNews] No relevant articles found, returning empty list");
             return GoldNewsResponse.builder()
                     .items(Collections.emptyList())
                     .provider("none")
