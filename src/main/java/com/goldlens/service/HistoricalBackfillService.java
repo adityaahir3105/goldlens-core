@@ -44,6 +44,7 @@ public class HistoricalBackfillService {
     private final GoldPriceScheduler goldPriceScheduler;
     private final com.goldlens.client.GoldApiClient goldApiClient;
     private final GoldPriceHistoryService goldPriceHistoryService;
+    private final GoldRiskAggregationService goldRiskAggregationService;
 
     public HistoricalBackfillService(FredClient fredClient,
                                      IndicatorService indicatorService,
@@ -51,7 +52,8 @@ public class HistoricalBackfillService {
                                      SignalEngineService signalEngineService,
                                      GoldPriceScheduler goldPriceScheduler,
                                      com.goldlens.client.GoldApiClient goldApiClient,
-                                     GoldPriceHistoryService goldPriceHistoryService) {
+                                     GoldPriceHistoryService goldPriceHistoryService,
+                                     GoldRiskAggregationService goldRiskAggregationService) {
         this.fredClient = fredClient;
         this.indicatorService = indicatorService;
         this.indicatorValueService = indicatorValueService;
@@ -59,6 +61,7 @@ public class HistoricalBackfillService {
         this.goldPriceScheduler = goldPriceScheduler;
         this.goldApiClient = goldApiClient;
         this.goldPriceHistoryService = goldPriceHistoryService;
+        this.goldRiskAggregationService = goldRiskAggregationService;
     }
 
     @EventListener(ApplicationReadyEvent.class)
@@ -96,6 +99,11 @@ public class HistoricalBackfillService {
 
         // After backfill, ensure signals are computed for all indicators
         computeSignalsForAllIndicators();
+
+        // The daily risk job only runs if an instance happens to be up at 06:10 UTC,
+        // so refresh the snapshot here too.
+        log.info("Computing gold risk snapshot after backfill");
+        goldRiskAggregationService.computeAndStoreRiskSnapshot(LocalDate.now());
     }
 
     private void computeSignalsForAllIndicators() {
