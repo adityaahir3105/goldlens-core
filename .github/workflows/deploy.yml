@@ -40,10 +40,22 @@ jobs:
         run: gcloud auth configure-docker asia-south1-docker.pkg.dev --quiet
 
       - name: Build and Push Docker Image
+        # gcloud builds submit exits non-zero whenever it can't read the default logs bucket
+        # (needs project Viewer), even with --suppress-logs. So start the build async and poll
+        # its status, which only needs cloudbuild.builds.get. Logs: Cloud Build console.
         run: |
-          # --suppress-logs: streaming needs project Viewer on the default logs bucket; the step still
-          # waits for the build and fails if it fails. Build logs are in the Cloud Build console.
-          gcloud builds submit --tag ${{ env.IMAGE }}:${{ github.sha }} --project=${{ env.PROJECT_ID }} --region=${{ env.REGION }} --suppress-logs
+          BUILD_ID=$(gcloud builds submit --tag ${{ env.IMAGE }}:${{ github.sha }} \
+            --project=${{ env.PROJECT_ID }} --region=${{ env.REGION }} --async --format='value(id)')
+          echo "Cloud Build $BUILD_ID: https://console.cloud.google.com/cloud-build/builds;region=${{ env.REGION }}/$BUILD_ID?project=${{ env.PROJECT_ID }}"
+          for _ in $(seq 1 120); do
+            STATUS=$(gcloud builds describe "$BUILD_ID" --project=${{ env.PROJECT_ID }} --region=${{ env.REGION }} --format='value(status)')
+            case "$STATUS" in
+              SUCCESS) echo "Build succeeded"; exit 0 ;;
+              QUEUED|PENDING|WORKING) sleep 10 ;;
+              *) echo "::error::Cloud Build $BUILD_ID finished with status $STATUS"; exit 1 ;;
+            esac
+          done
+          echo "::error::Timed out waiting for Cloud Build $BUILD_ID"; exit 1
 
       - name: Deploy to Cloud Run
         uses: google-github-actions/deploy-cloudrun@v2
