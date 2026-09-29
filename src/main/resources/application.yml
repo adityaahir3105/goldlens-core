@@ -29,6 +29,11 @@ gemini:
   api:
     key: ${GEMINI_API_KEY:}
 
+# Shared secret required in the X-Admin-Token header for /api/admin/**.
+# Leave unset to disable the admin endpoints entirely.
+admin:
+  token: ${ADMIN_TOKEN:}
+
 goldpricez:
   base-url: ${GOLDPRICEZ_BASE_URL:https://goldpricez.com/api}
   api:

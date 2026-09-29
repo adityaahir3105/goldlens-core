@@ -25,5 +25,6 @@ COPY --from=build /app/target/*.jar app.jar
 # Expose port (Render will set PORT env var)
 EXPOSE 8081
 
-# Run the application with memory limits for Render free tier
-ENTRYPOINT ["java", "-Xms128m", "-Xmx384m", "-XX:+UseG1GC", "-jar", "app.jar"]
+# Size the heap from the container's memory limit (75%) so it fits both
+# Render's 512MB free tier and larger Cloud Run instances.
+ENTRYPOINT ["java", "-XX:MaxRAMPercentage=75", "-XX:+UseG1GC", "-jar", "app.jar"]
