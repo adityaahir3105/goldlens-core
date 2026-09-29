@@ -73,9 +73,23 @@ class GoldNewsServiceTest {
     }
 
     @Test
-    void returnsEmptyWhenBothProvidersFallShort() {
+    void showsFewerThanThreeRelevantArticlesInsteadOfNothing() {
+        when(newsApi.fetchGoldNews()).thenReturn(Optional.of(List.of(
+                article("Gold rises on rate cut hopes", "u1"),
+                article("Dollar weakens as yields fall", "u2"),
+                article("New smartphone launch", "x1"))));
+        when(gNews.fetchGoldNews()).thenReturn(Optional.empty()); // e.g. 429, daily limit reached
+
+        GoldNewsResponse response = service.getGoldNews();
+
+        assertEquals(2, response.getItems().size());
+        assertEquals("newsapi", response.getProvider());
+    }
+
+    @Test
+    void returnsEmptyWhenNoProviderHasRelevantArticles() {
         when(newsApi.fetchGoldNews()).thenReturn(Optional.empty());
-        when(gNews.fetchGoldNews()).thenReturn(Optional.of(List.of(article("Gold steady", "g1"))));
+        when(gNews.fetchGoldNews()).thenReturn(Optional.of(List.of(article("New smartphone launch", "x1"))));
 
         GoldNewsResponse response = service.getGoldNews();
 
