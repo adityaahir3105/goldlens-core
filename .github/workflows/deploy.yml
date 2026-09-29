@@ -7,12 +7,12 @@ on:
   workflow_dispatch:
 
 env:
-  PROJECT_ID: goldlens-app-2026
+  PROJECT_ID: goldlens-prod-2026
   REGION: asia-south1
   SERVICE: goldlens-core
-  IMAGE: asia-south1-docker.pkg.dev/goldlens-app-2026/goldlens-repo/goldlens-core
-  SQL_INSTANCE: goldlens-app-2026:asia-south1:goldlens-db
-  RUNTIME_SA: goldlens-core-run@goldlens-app-2026.iam.gserviceaccount.com
+  IMAGE: asia-south1-docker.pkg.dev/goldlens-prod-2026/goldlens-repo/goldlens-core
+  SQL_INSTANCE: goldlens-prod-2026:asia-south1:goldlens-db
+  RUNTIME_SA: goldlens-core-run@goldlens-prod-2026.iam.gserviceaccount.com
 
 jobs:
   deploy:
