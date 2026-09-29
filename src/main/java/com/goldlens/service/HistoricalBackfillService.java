@@ -71,7 +71,10 @@ public class HistoricalBackfillService {
             try {
                 // Small delay to let the app fully settle
                 Thread.sleep(5000);
-                runBackfillIfNeeded();
+                // No GoldAPI calls on startup: the service scales to zero and restarts often,
+                // and the free GoldAPI plan only allows 100 requests a month. Gold history is
+                // backfilled on demand through POST /api/admin/backfill-macro.
+                runBackfillIfNeeded(false);
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 log.warn("Backfill thread interrupted");
@@ -89,13 +92,19 @@ public class HistoricalBackfillService {
      * This method is idempotent and safe to call multiple times.
      */
     public void runBackfillIfNeeded() {
+        runBackfillIfNeeded(true);
+    }
+
+    public void runBackfillIfNeeded(boolean includeGoldPriceHistory) {
         // Backfill macro indicators from FRED
         for (String indicatorCode : INDICATOR_SERIES_MAP.keySet()) {
             backfillIndicatorIfNeeded(indicatorCode);
         }
 
-        // Backfill gold price history using GoldAPI
-        backfillGoldPriceHistory();
+        // Backfill gold price history using GoldAPI (spends quota, so on demand only)
+        if (includeGoldPriceHistory) {
+            backfillGoldPriceHistory();
+        }
 
         // After backfill, ensure signals are computed for all indicators
         computeSignalsForAllIndicators();

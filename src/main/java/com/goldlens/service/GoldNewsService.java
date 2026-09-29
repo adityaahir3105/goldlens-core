@@ -8,7 +8,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -74,39 +76,43 @@ public class GoldNewsService {
         this.gNewsClient = gNewsClient;
     }
 
-    public GoldNewsResponse getGoldNews() {
-        String provider = null;
-        List<GoldNewsItem> items = Collections.emptyList();
+    // Both providers have small free quotas (NewsAPI 100/day, GNews 100/day), and the
+    // dashboard asks for news on every page view, so serve a cached response.
+    static final Duration CACHE_TTL = Duration.ofMinutes(30);
+    // An empty result (quota exhausted, provider down) is retried sooner.
+    static final Duration EMPTY_CACHE_TTL = Duration.ofMinutes(10);
 
-        // Try primary provider (NewsAPI)
+    private GoldNewsResponse cached;
+    private Instant cachedUntil = Instant.MIN;
+
+    public synchronized GoldNewsResponse getGoldNews() {
+        Instant now = Instant.now();
+        if (cached != null && now.isBefore(cachedUntil)) {
+            return cached;
+        }
+        cached = fetchGoldNews();
+        cachedUntil = now.plus(cached.getItems().isEmpty() ? EMPTY_CACHE_TTL : CACHE_TTL);
+        return cached;
+    }
+
+    private GoldNewsResponse fetchGoldNews() {
+        List<String> providers = new ArrayList<>();
+        List<GoldNewsItem> relevant = new ArrayList<>();
+
+        // Primary provider (NewsAPI)
         if (newsApiClient.isConfigured()) {
-            Optional<List<GoldNewsItem>> result = newsApiClient.fetchGoldNews();
-            if (result.isPresent() && !result.get().isEmpty()) {
-                items = result.get();
-                provider = newsApiClient.getProviderName();
-                log.info("[GoldNews] Fetched {} raw articles from primary provider", items.size());
-            }
+            addRelevant(newsApiClient.fetchGoldNews(), newsApiClient.getProviderName(), relevant, providers);
         }
 
-        // Fallback to GNews if primary failed
-        if (items.isEmpty() && gNewsClient.isConfigured()) {
-            log.info("[GoldNews] Primary provider failed or empty, trying fallback");
-            Optional<List<GoldNewsItem>> result = gNewsClient.fetchGoldNews();
-            if (result.isPresent() && !result.get().isEmpty()) {
-                items = result.get();
-                provider = gNewsClient.getProviderName();
-                log.info("[GoldNews] Fetched {} raw articles from fallback provider", items.size());
-            }
+        // Top up from GNews when the primary didn't yield enough relevant articles
+        if (relevant.size() < MIN_VALID_ARTICLES && gNewsClient.isConfigured()) {
+            log.info("[GoldNews] {} relevant articles from primary, trying fallback", relevant.size());
+            addRelevant(gNewsClient.fetchGoldNews(), gNewsClient.getProviderName(), relevant, providers);
         }
 
-        // STRICT RELEVANCE FILTERING - Remove unrelated articles
-        List<GoldNewsItem> filteredItems = items.stream()
-                .filter(this::isRelevantToGold)
+        List<GoldNewsItem> filteredItems = relevant.stream()
                 .limit(MAX_ARTICLES_TO_RETURN)
                 .collect(Collectors.toList());
-
-        log.info("[GoldNews] After relevance filtering: {} of {} articles kept", 
-                filteredItems.size(), items.size());
 
         // If fewer than MIN_VALID_ARTICLES remain, return empty (don't pad with junk)
         if (filteredItems.size() < MIN_VALID_ARTICLES) {
@@ -124,9 +130,28 @@ public class GoldNewsService {
 
         return GoldNewsResponse.builder()
                 .items(filteredItems)
-                .provider(provider)
+                .provider(String.join("+", providers))
                 .fetchedAt(Instant.now())
                 .build();
+    }
+
+    /** Adds the provider's relevant articles, skipping URLs already collected. */
+    private void addRelevant(Optional<List<GoldNewsItem>> result, String providerName,
+                             List<GoldNewsItem> relevant, List<String> providers) {
+        if (result.isEmpty() || result.get().isEmpty()) {
+            return;
+        }
+        Set<String> seenUrls = relevant.stream().map(GoldNewsItem::getUrl).collect(Collectors.toSet());
+        List<GoldNewsItem> kept = result.get().stream()
+                .filter(this::isRelevantToGold)
+                .filter(item -> item.getUrl() == null || !seenUrls.contains(item.getUrl()))
+                .collect(Collectors.toList());
+        log.info("[GoldNews] {}: kept {} of {} articles after relevance filtering",
+                providerName, kept.size(), result.get().size());
+        if (!kept.isEmpty()) {
+            relevant.addAll(kept);
+            providers.add(providerName);
+        }
     }
 
     /**
