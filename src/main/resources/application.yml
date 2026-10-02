@@ -33,6 +33,10 @@ gemini:
   api:
     key: ${GEMINI_API_KEY:}
 
+# Browser origins allowed to call /api/** (comma-separated).
+cors:
+  allowed-origins: ${CORS_ALLOWED_ORIGINS:https://goldlens.web.app,https://goldlens.firebaseapp.com,http://localhost:3000}
+
 # Shared secret required in the X-Admin-Token header for /api/admin/**.
 # Leave unset to disable the admin endpoints entirely.
 admin:
