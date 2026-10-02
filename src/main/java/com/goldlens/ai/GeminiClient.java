@@ -130,7 +130,7 @@ public class GeminiClient {
                         Map.of("role", "user", "parts", List.of(Map.of("text", prompt)))
                 ),
                 "generationConfig", Map.of(
-                        "maxOutputTokens", 300,
+                        "maxOutputTokens", 2048,
                         "temperature", 0.3
                 )
         );
