@@ -18,7 +18,7 @@ public class GeminiClient {
 
     private static final Logger log = LoggerFactory.getLogger(GeminiClient.class);
 
-    private static final String GEMINI_API_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent";
+    private static final String GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/models/";
     private static final Duration TIMEOUT = Duration.ofSeconds(30);
 
     private static final String SYSTEM_INSTRUCTION = """
@@ -31,10 +31,11 @@ public class GeminiClient {
     private final WebClient webClient;
     private final String apiKey;
 
-    public GeminiClient(@Value("${gemini.api.key}") String apiKey) {
+    public GeminiClient(@Value("${gemini.api.key}") String apiKey,
+                        @Value("${gemini.model:gemini-3.8-flash}") String model) {
         this.apiKey = apiKey;
         this.webClient = WebClient.builder()
-                .baseUrl(GEMINI_API_URL)
+                .baseUrl(GEMINI_BASE_URL + model + ":generateContent")
                 .build();
     }
 
