@@ -2,6 +2,7 @@ package com.goldlens.service;
 
 import com.goldlens.client.GNewsClient;
 import com.goldlens.client.NewsApiClient;
+import com.goldlens.client.OpenNewsClient;
 import com.goldlens.dto.GoldNewsItem;
 import com.goldlens.dto.GoldNewsResponse;
 import org.junit.jupiter.api.BeforeEach;
@@ -22,17 +23,21 @@ class GoldNewsServiceTest {
 
     private NewsApiClient newsApi;
     private GNewsClient gNews;
+    private OpenNewsClient openNews;
     private GoldNewsService service;
 
     @BeforeEach
     void setUp() {
         newsApi = mock(NewsApiClient.class);
         gNews = mock(GNewsClient.class);
+        openNews = mock(OpenNewsClient.class);
+        when(openNews.fetchGoldNews()).thenReturn(Optional.empty());
+        when(openNews.getProviderName()).thenReturn("gdelt+rss");
         when(newsApi.isConfigured()).thenReturn(true);
         when(gNews.isConfigured()).thenReturn(true);
         when(newsApi.getProviderName()).thenReturn("newsapi");
         when(gNews.getProviderName()).thenReturn("gnews");
-        service = new GoldNewsService(newsApi, gNews);
+        service = new GoldNewsService(newsApi, gNews, openNews);
     }
 
     private static GoldNewsItem article(String title, String url) {

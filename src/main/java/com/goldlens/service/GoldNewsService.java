@@ -2,6 +2,7 @@ package com.goldlens.service;
 
 import com.goldlens.client.GNewsClient;
 import com.goldlens.client.NewsApiClient;
+import com.goldlens.client.OpenNewsClient;
 import com.goldlens.dto.GoldNewsItem;
 import com.goldlens.dto.GoldNewsResponse;
 import org.slf4j.Logger;
@@ -71,10 +72,12 @@ public class GoldNewsService {
 
     private final NewsApiClient newsApiClient;
     private final GNewsClient gNewsClient;
+    private final OpenNewsClient openNewsClient;
 
-    public GoldNewsService(NewsApiClient newsApiClient, GNewsClient gNewsClient) {
+    public GoldNewsService(NewsApiClient newsApiClient, GNewsClient gNewsClient, OpenNewsClient openNewsClient) {
         this.newsApiClient = newsApiClient;
         this.gNewsClient = gNewsClient;
+        this.openNewsClient = openNewsClient;
     }
 
     // Both providers have small free quotas (NewsAPI 100/day, GNews 100/day), and the
@@ -100,12 +103,16 @@ public class GoldNewsService {
         List<String> providers = new ArrayList<>();
         List<GoldNewsItem> relevant = new ArrayList<>();
 
-        // Primary provider (NewsAPI)
-        if (newsApiClient.isConfigured()) {
+        // Keyless sources first (GDELT and publisher RSS); the keyed providers below only
+        // top up. The free NewsAPI and GNews plans are for development use, so production
+        // should not depend on them.
+        addRelevant(openNewsClient.fetchGoldNews(), openNewsClient.getProviderName(), relevant, providers);
+
+        if (relevant.size() < TARGET_ARTICLES && newsApiClient.isConfigured()) {
             addRelevant(newsApiClient.fetchGoldNews(), newsApiClient.getProviderName(), relevant, providers);
         }
 
-        // Top up from GNews when the primary didn't yield enough relevant articles
+        // Top up from GNews when the others didn't yield enough relevant articles
         if (relevant.size() < TARGET_ARTICLES && gNewsClient.isConfigured()) {
             log.info("[GoldNews] {} relevant articles from primary, trying fallback", relevant.size());
             addRelevant(gNewsClient.fetchGoldNews(), gNewsClient.getProviderName(), relevant, providers);
