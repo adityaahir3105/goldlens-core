@@ -76,5 +76,5 @@ jobs:
             --no-cpu-throttling
             --min-instances=0
             --max-instances=1
-            --set-env-vars=SPRING_PROFILES_ACTIVE=gcp,CLOUD_SQL_CONNECTION_NAME=${{ env.SQL_INSTANCE }},PGDATABASE=goldlens,PGUSER=goldlens_app,GOLD_BACKFILL_ENABLED=false
-            --set-secrets=PGPASSWORD=goldlens-db-password:latest,ADMIN_TOKEN=goldlens-admin-token:latest,FRED_API_KEY=fred-api-key:latest,GEMINI_API_KEY=gemini-api-key:latest,GOLD_API_KEY=gold-api-key:latest,GNEWS_API_KEY=gnews-api-key:latest
+            --set-env-vars=SPRING_PROFILES_ACTIVE=gcp,CLOUD_SQL_CONNECTION_NAME=${{ env.SQL_INSTANCE }},PGDATABASE=goldlens,PGUSER=goldlens_app,GOLD_BACKFILL_ENABLED=false,GEMINI_BACKEND=vertex,GOOGLE_CLOUD_PROJECT=${{ env.PROJECT_ID }}
+            --set-secrets=PGPASSWORD=goldlens-db-password:latest,ADMIN_TOKEN=goldlens-admin-token:latest,FRED_API_KEY=fred-api-key:latest,GOLD_API_KEY=gold-api-key:latest,GNEWS_API_KEY=gnews-api-key:latest

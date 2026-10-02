@@ -27,6 +27,9 @@ fred:
 
 gemini:
   model: ${GEMINI_MODEL:gemini-3.8-flash}
+  backend: ${GEMINI_BACKEND:}
+  project: ${GOOGLE_CLOUD_PROJECT:}
+  location: ${GEMINI_LOCATION:global}
   api:
     key: ${GEMINI_API_KEY:}
 
