@@ -127,7 +127,7 @@ public class GeminiClient {
                         "parts", List.of(Map.of("text", SYSTEM_INSTRUCTION))
                 ),
                 "contents", List.of(
-                        Map.of("parts", List.of(Map.of("text", prompt)))
+                        Map.of("role", "user", "parts", List.of(Map.of("text", prompt)))
                 ),
                 "generationConfig", Map.of(
                         "maxOutputTokens", 300,
