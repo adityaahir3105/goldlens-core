@@ -11,7 +11,8 @@ env:
   REGION: asia-south1
   SERVICE: goldlens-core
   IMAGE: asia-south1-docker.pkg.dev/goldlens-prod-2026/goldlens-repo/goldlens-core
-  SQL_INSTANCE: goldlens-prod-2026:asia-south1:goldlens-db
+  # Neon Postgres (free plan); the password is the goldlens-neon-password secret.
+  NEON_HOST: ep-royal-hall-azobp0ja.c-3.ap-southeast-1.aws.neon.tech
   RUNTIME_SA: goldlens-core-run@goldlens-prod-2026.iam.gserviceaccount.com
 
 jobs:
@@ -69,12 +70,11 @@ jobs:
           # @Scheduled jobs are not starved between requests; max-instances=1 avoids duplicate runs.
           flags: |
             --service-account=${{ env.RUNTIME_SA }}
-            --add-cloudsql-instances=${{ env.SQL_INSTANCE }}
             --allow-unauthenticated
             --memory=1Gi
             --cpu=1
             --no-cpu-throttling
             --min-instances=0
             --max-instances=1
-            --set-env-vars=SPRING_PROFILES_ACTIVE=gcp,CLOUD_SQL_CONNECTION_NAME=${{ env.SQL_INSTANCE }},PGDATABASE=goldlens,PGUSER=goldlens_app,GOLD_BACKFILL_ENABLED=false,GEMINI_BACKEND=vertex,GOOGLE_CLOUD_PROJECT=${{ env.PROJECT_ID }}
-            --set-secrets=PGPASSWORD=goldlens-db-password:latest,ADMIN_TOKEN=goldlens-admin-token:latest,FRED_API_KEY=fred-api-key:latest,GOLD_API_KEY=gold-api-key:latest,GNEWS_API_KEY=gnews-api-key:latest
+            --set-env-vars=SPRING_PROFILES_ACTIVE=gcp,SPRING_DATASOURCE_URL=jdbc:postgresql://${{ env.NEON_HOST }}:5432/goldlens?sslmode=require,PGHOST=${{ env.NEON_HOST }},PGPORT=5432,PGDATABASE=goldlens,PGUSER=goldlens_owner,GOLD_BACKFILL_ENABLED=false,GEMINI_BACKEND=vertex,GOOGLE_CLOUD_PROJECT=${{ env.PROJECT_ID }}
+            --set-secrets=PGPASSWORD=goldlens-neon-password:latest,ADMIN_TOKEN=goldlens-admin-token:latest,FRED_API_KEY=fred-api-key:latest,GOLD_API_KEY=gold-api-key:latest,GNEWS_API_KEY=gnews-api-key:latest
