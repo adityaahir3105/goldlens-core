@@ -66,15 +66,16 @@ jobs:
           image: ${{ env.IMAGE }}:${{ github.sha }}
           project_id: ${{ env.PROJECT_ID }}
           # Secrets come from Secret Manager (created by deploy/gcp-setup.sh), never from this file.
-          # --no-cpu-throttling keeps CPU on while an instance is up so background backfills and
-          # @Scheduled jobs are not starved between requests; max-instances=1 avoids duplicate runs.
+          # Request-based billing (--cpu-throttling): CPU is only billed while serving a request, so the
+          # in-app timers are off (GOLDLENS_SCHEDULING_ENABLED=false) and Cloud Scheduler calls
+          # /api/admin/jobs/* instead (deploy/scheduler-setup.sh). max-instances=1 avoids duplicate runs.
           flags: |
             --service-account=${{ env.RUNTIME_SA }}
             --allow-unauthenticated
             --memory=1Gi
             --cpu=1
-            --no-cpu-throttling
+            --cpu-throttling
             --min-instances=0
             --max-instances=1
-            --set-env-vars=SPRING_PROFILES_ACTIVE=gcp,SPRING_DATASOURCE_URL=jdbc:postgresql://${{ env.NEON_HOST }}:5432/goldlens?sslmode=require,PGHOST=${{ env.NEON_HOST }},PGPORT=5432,PGDATABASE=goldlens,PGUSER=goldlens_owner,GOLD_BACKFILL_ENABLED=false,GEMINI_BACKEND=vertex,GOOGLE_CLOUD_PROJECT=${{ env.PROJECT_ID }}
+            --set-env-vars=SPRING_PROFILES_ACTIVE=gcp,SPRING_DATASOURCE_URL=jdbc:postgresql://${{ env.NEON_HOST }}:5432/goldlens?sslmode=require,PGHOST=${{ env.NEON_HOST }},PGPORT=5432,PGDATABASE=goldlens,PGUSER=goldlens_owner,GOLD_BACKFILL_ENABLED=false,GOLDLENS_SCHEDULING_ENABLED=false,GEMINI_BACKEND=vertex,GOOGLE_CLOUD_PROJECT=${{ env.PROJECT_ID }}
             --set-secrets=PGPASSWORD=goldlens-neon-password:latest,ADMIN_TOKEN=goldlens-admin-token:latest,FRED_API_KEY=fred-api-key:latest,GOLD_API_KEY=gold-api-key:latest,GNEWS_API_KEY=gnews-api-key:latest

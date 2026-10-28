@@ -83,7 +83,23 @@ takes several runs and may exceed the GoldAPI free-tier quota.
 | RealYieldScheduler | `0 0 6 * * *` | Fetches US 10Y Real Yield from FRED |
 | DxyScheduler | `0 5 6 * * *` | Fetches US Dollar Index from FRED |
 | GoldRiskScheduler | `0 10 6 * * *` | Aggregates gold risk signals |
-| GoldPriceScheduler | `0 15 6 * * *` | Fetches gold spot price from GoldAPI |
+| GoldPriceScheduler | `0 0 */6 * * *` | Fetches gold spot price from GoldAPI |
+
+These in-app timers run locally. On Cloud Run the service uses request-based billing (CPU only
+while serving a request), so they are switched off with `GOLDLENS_SCHEDULING_ENABLED=false` and
+Cloud Scheduler calls the admin job endpoints instead. Create those jobs once with:
+
+```bash
+bash deploy/scheduler-setup.sh
+```
+
+| Cloud Scheduler job | Cron (UTC) | Endpoint |
+|---------------------|------------|----------|
+| goldlens-gold-price | `0 */6 * * *` | `POST /api/admin/jobs/gold-price` |
+| goldlens-daily | `0 6 * * *` | `POST /api/admin/jobs/daily` (real yield, DXY, then gold risk) |
+
+`/api/admin/backfill-macro` still runs in the background after it responds, which request-based
+billing starves of CPU; on Cloud Run, run long backfills locally against the database instead.
 
 ## First Start Behavior
 
