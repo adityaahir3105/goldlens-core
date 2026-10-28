@@ -29,7 +29,8 @@ public class AdminTokenFilter extends OncePerRequestFilter {
     private final byte[] expected;
 
     public AdminTokenFilter(@Value("${admin.token:}") String token) {
-        this.expected = token == null ? new byte[0] : token.getBytes(StandardCharsets.UTF_8);
+        // Trimmed: a secret saved with a trailing \r or \n could never match, since HTTP strips it from headers.
+        this.expected = token == null ? new byte[0] : token.strip().getBytes(StandardCharsets.UTF_8);
         if (expected.length == 0) {
             log.warn("admin.token is not set - all /api/admin endpoints are disabled");
         }

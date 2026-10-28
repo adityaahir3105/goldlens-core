@@ -22,7 +22,8 @@ export CLOUDSDK_BILLING_QUOTA_PROJECT="$PROJECT_ID"
 gcloud services enable cloudscheduler.googleapis.com --project "$PROJECT_ID"
 
 URL=$(gcloud run services describe "$SERVICE" --region "$REGION" --project "$PROJECT_ID" --format='value(status.url)')
-TOKEN=$(gcloud secrets versions access latest --secret goldlens-admin-token --project "$PROJECT_ID")
+# Strip line endings: a secret saved on Windows can end in \r, which HTTP drops from the header.
+TOKEN=$(gcloud secrets versions access latest --secret goldlens-admin-token --project "$PROJECT_ID" | tr -d '\r\n')
 
 upsert_job() {
   local name="$1" schedule="$2" path="$3"

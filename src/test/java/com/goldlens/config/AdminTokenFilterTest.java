@@ -42,6 +42,13 @@ class AdminTokenFilterTest {
     void failsClosedWhenNoTokenConfigured() throws Exception {
         assertEquals(401, run("", "/api/admin/backfill-macro", "").getStatus());
         assertEquals(401, run(null, "/api/admin/backfill-macro", "anything").getStatus());
+        assertEquals(401, run(" \r\n", "/api/admin/backfill-macro", "").getStatus());
+    }
+
+    @Test
+    void ignoresLineEndingsSavedWithTheConfiguredToken() throws Exception {
+        assertEquals(200, run("s3cret\r", "/api/admin/jobs/daily", "s3cret").getStatus());
+        assertEquals(200, run("s3cret\n", "/api/admin/jobs/daily", "s3cret").getStatus());
     }
 
     @Test
