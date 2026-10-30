@@ -43,11 +43,17 @@ public class StartupLogger {
         logApiKeyStatus("GEMINI_API_KEY", environment.getProperty("gemini.api.key"));
         logApiKeyStatus("GOLDPRICEZ_API_KEY", environment.getProperty("goldpricez.api.key"));
 
-        // Log scheduler status
-        log.info("RealYieldScheduler enabled (cron: 0 0 6 * * * - daily 06:00 UTC)");
-        log.info("DxyScheduler enabled (cron: 0 5 6 * * * - daily 06:05 UTC)");
-        log.info("GoldRiskScheduler enabled (cron: 0 10 6 * * * - daily 06:10 UTC)");
-        log.info("GoldPriceScheduler enabled (cron: 0 */15 * * * * - every 15 minutes)");
+        // Log scheduler status (same property SchedulingConfig is conditional on)
+        if (environment.getProperty("goldlens.scheduling.enabled", Boolean.class, true)) {
+            log.info("RealYieldScheduler enabled (cron: 0 0 6 * * * - daily 06:00 UTC)");
+            log.info("DxyScheduler enabled (cron: 0 5 6 * * * - daily 06:05 UTC)");
+            log.info("GoldRiskScheduler enabled (cron: 0 10 6 * * * - daily 06:10 UTC)");
+            log.info("GoldPriceScheduler enabled (cron: 0 0 */6 * * * - every 6 hours)");
+        } else {
+            log.info("In-app schedulers disabled; jobs run via POST /api/admin/jobs/* (Cloud Scheduler)");
+        }
+        log.info("Startup backfill: {}",
+                environment.getProperty("goldlens.startup.backfill", Boolean.class, true) ? "enabled" : "disabled");
 
         log.info("=== Startup Complete ===");
     }

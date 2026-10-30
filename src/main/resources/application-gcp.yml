@@ -1,10 +1,20 @@
-# GCP Cloud Run profile - uses Cloud SQL socket factory for Unix socket connections
+# GCP Cloud Run profile - connects to Neon Postgres over TLS (deploy.yml sets SPRING_DATASOURCE_URL)
 spring:
   datasource:
-    url: jdbc:postgresql:///${PGDATABASE:goldlens}?cloudSqlInstance=${CLOUD_SQL_CONNECTION_NAME}&socketFactory=com.google.cloud.sql.postgres.SocketFactory
+    url: jdbc:postgresql://${PGHOST}:${PGPORT:5432}/${PGDATABASE:goldlens}?sslmode=require
     username: ${PGUSER:postgres}
     password: ${PGPASSWORD}
     driver-class-name: org.postgresql.Driver
+    # Neon suspends its compute after ~5 idle minutes and drops open connections, and with
+    # request-based billing Hikari's housekeeping barely runs between requests. So keep no idle
+    # connections and retire them well before Neon would: each request after a quiet spell opens a
+    # fresh connection instead of using a dead socket. No keepalive, which would stop Neon suspending.
+    hikari:
+      maximum-pool-size: 3
+      minimum-idle: 0
+      idle-timeout: 60000
+      max-lifetime: 240000
+      connection-timeout: 20000
 
   jpa:
     hibernate:

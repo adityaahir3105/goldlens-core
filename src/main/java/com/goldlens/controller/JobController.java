@@ -4,6 +4,7 @@ import com.goldlens.scheduler.DxyScheduler;
 import com.goldlens.scheduler.GoldPriceScheduler;
 import com.goldlens.scheduler.GoldRiskScheduler;
 import com.goldlens.scheduler.RealYieldScheduler;
+import com.goldlens.service.HistoricalBackfillService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -27,6 +28,7 @@ public class JobController {
     private final RealYieldScheduler realYieldScheduler;
     private final DxyScheduler dxyScheduler;
     private final GoldRiskScheduler goldRiskScheduler;
+    private final HistoricalBackfillService historicalBackfillService;
 
     @PostMapping("/gold-price")
     public ResponseEntity<String> goldPrice() {
@@ -36,11 +38,14 @@ public class JobController {
     }
 
     // Same order as the old 06:00 / 06:05 / 06:10 UTC timers: indicators first, then the risk roll-up.
+    // Gap filling (formerly done on every startup) runs after the latest-value ingests, so those still
+    // see the new observation and compute its signal.
     @PostMapping("/daily")
     public ResponseEntity<String> daily() {
         log.info("Job trigger: daily indicators and gold risk");
         realYieldScheduler.ingestRealYield();
         dxyScheduler.ingestDxy();
+        historicalBackfillService.fillMacroGaps();
         goldRiskScheduler.computeDailyGoldRisk();
         return ResponseEntity.ok("daily jobs done");
     }

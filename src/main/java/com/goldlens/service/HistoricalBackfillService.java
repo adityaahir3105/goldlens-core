@@ -6,6 +6,7 @@ import com.goldlens.scheduler.FredClient;
 import com.goldlens.scheduler.GoldPriceScheduler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
@@ -45,6 +46,7 @@ public class HistoricalBackfillService {
     private final com.goldlens.client.GoldApiClient goldApiClient;
     private final GoldPriceHistoryService goldPriceHistoryService;
     private final GoldRiskAggregationService goldRiskAggregationService;
+    private final boolean startupBackfill;
 
     public HistoricalBackfillService(FredClient fredClient,
                                      IndicatorService indicatorService,
@@ -53,7 +55,8 @@ public class HistoricalBackfillService {
                                      GoldPriceScheduler goldPriceScheduler,
                                      com.goldlens.client.GoldApiClient goldApiClient,
                                      GoldPriceHistoryService goldPriceHistoryService,
-                                     GoldRiskAggregationService goldRiskAggregationService) {
+                                     GoldRiskAggregationService goldRiskAggregationService,
+                                     @Value("${goldlens.startup.backfill:true}") boolean startupBackfill) {
         this.fredClient = fredClient;
         this.indicatorService = indicatorService;
         this.indicatorValueService = indicatorValueService;
@@ -62,10 +65,18 @@ public class HistoricalBackfillService {
         this.goldApiClient = goldApiClient;
         this.goldPriceHistoryService = goldPriceHistoryService;
         this.goldRiskAggregationService = goldRiskAggregationService;
+        this.startupBackfill = startupBackfill;
     }
 
     @EventListener(ApplicationReadyEvent.class)
     public void onApplicationReady() {
+        // Off on Cloud Run (GOLDLENS_STARTUP_BACKFILL=false): with request-based billing a background
+        // thread gets almost no CPU, so its database connection timed out mid-run. The daily job
+        // fills FRED gaps inside its request instead (see fillMacroGaps).
+        if (!startupBackfill) {
+            log.info("Startup backfill disabled (goldlens.startup.backfill=false)");
+            return;
+        }
         log.info("Application ready — scheduling background backfill");
         Thread backfillThread = new Thread(() -> {
             try {
@@ -96,10 +107,7 @@ public class HistoricalBackfillService {
     }
 
     public void runBackfillIfNeeded(boolean includeGoldPriceHistory) {
-        // Backfill macro indicators from FRED
-        for (String indicatorCode : INDICATOR_SERIES_MAP.keySet()) {
-            backfillIndicatorIfNeeded(indicatorCode);
-        }
+        fillMacroGaps();
 
         // Backfill gold price history using GoldAPI (spends quota, so on demand only)
         if (includeGoldPriceHistory) {
@@ -113,6 +121,16 @@ public class HistoricalBackfillService {
         // so refresh the snapshot here too.
         log.info("Computing gold risk snapshot after backfill");
         goldRiskAggregationService.computeAndStoreRiskSnapshot(LocalDate.now());
+    }
+
+    /**
+     * Inserts any FRED observations from the last year that are missing, e.g. days the daily job
+     * missed because FRED published late. Spends no GoldAPI quota.
+     */
+    public void fillMacroGaps() {
+        for (String indicatorCode : INDICATOR_SERIES_MAP.keySet()) {
+            backfillIndicatorIfNeeded(indicatorCode);
+        }
     }
 
     private void computeSignalsForAllIndicators() {
