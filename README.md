@@ -96,14 +96,16 @@ bash deploy/scheduler-setup.sh
 | Cloud Scheduler job | Cron (UTC) | Endpoint |
 |---------------------|------------|----------|
 | goldlens-gold-price | `0 */6 * * *` | `POST /api/admin/jobs/gold-price` |
-| goldlens-daily | `0 6 * * *` | `POST /api/admin/jobs/daily` (real yield, DXY, then gold risk) |
+| goldlens-daily | `0 6 * * *` | `POST /api/admin/jobs/daily` (real yield, DXY, FRED gap fill, then gold risk) |
 
 `/api/admin/backfill-macro` still runs in the background after it responds, which request-based
 billing starves of CPU; on Cloud Run, run long backfills locally against the database instead.
 
 ## First Start Behavior
 
-On every startup (`HistoricalBackfillService`, on `ApplicationReadyEvent`):
+On every startup (`HistoricalBackfillService`, on `ApplicationReadyEvent`), unless
+`GOLDLENS_STARTUP_BACKFILL=false`. Cloud Run sets that: a background thread gets almost no CPU under
+request-based billing, so the daily job fills FRED gaps inside its request instead.
 
 1. **Macro backfill** - fills missing days of the last 365 days of FRED indicators
 2. **Signal computation** - generates today's signals for all indicators
