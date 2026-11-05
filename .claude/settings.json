@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "deny": [
+      "Read(./target/**)",
+      "Read(./**/*.xlsx)",
+      "Read(./.env)",
+      "Read(./.env.*)"
+    ]
+  }
+}
